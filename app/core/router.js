@@ -5,7 +5,7 @@
 var app = express();
 var bodyParser = require('body-parser');
 
-PORT = process.env.PORT || 3300;
+PORT = process.env.PORT || 3100;
 
 var controllers = {};
 var controllersPath = process.cwd() + '/app/controllers';
