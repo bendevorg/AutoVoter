@@ -83,29 +83,8 @@ exports.vote = (req, res) => {
                             return res.status(200).json({msg: 'Feito!'});
 
                         });
-
                     });
-
                 }
-
             });
-
-            /*request.post({url: url, form: loginData}, function(err, httpResponse, body){
-
-                url = 'https://panel.talonro.com/voting/5/';
-
-                request.get({url: url}, function(err, httpResponse, body){
-
-                    console.log(body);
-
-                    res.status(200).json({
-                        msg: 'Foi!'
-                    });
-
-                });
-
-            });*/
-
         }
-
 }
