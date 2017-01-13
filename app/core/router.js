@@ -26,6 +26,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 //  Root API
 app.post('/voteOnce', controllers.voter.vote);
 
+app.get('/haha', controllers.teste.test);
+
 //  Boots server
 app.listen(PORT, () => {
     console.log('Server is functional on ' + PORT + ' port on ' + process.env.NODE_ENV + " environment.");

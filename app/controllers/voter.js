@@ -3,6 +3,7 @@ request = request.defaults({jar: true});
 jar = request.jar();
 
 var url = '';
+const NUMBER_OF_WEBSITES_TO_VOTE = 5;
 
 exports.vote = (req, res) => {
 
@@ -18,73 +19,79 @@ exports.vote = (req, res) => {
 
         } else {
 
-            url = 'https://panel.talonro.com/voting/';
+            var interval = 10;
 
-            request.get({url: url}, function(err, httpResponse, html){
+            var loopVote = setInterval(() => {
+     
+                url = 'https://panel.talonro.com/voting/';
 
-                var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
-                var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
+                request.get({url: url}, function(err, httpResponse, html){
 
-                var csrf = '';
-                var ref = '';
+                    var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
+                    var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
 
-                if (!csrfKeyRegExp.test(html)) {
+                    var csrf = '';
+                    var ref = '';
 
-                    return res.status(400).json({
-                        msg: 'Erro ao pegar o CSRF para login'
-                    });
+                    if (!csrfKeyRegExp.test(html)) {
 
-                } else if (!refRegExp.test(html)){
+                        return res.status(400).json({
+                            msg: 'Erro ao pegar o CSRF para login'
+                        });
 
-                    return res.status(400).json({
-                        msg: 'Erro ao pegar o CSRF para login'
-                    });
+                    } else if (!refRegExp.test(html)){
 
-                } else {
+                        return res.status(400).json({
+                            msg: 'Erro ao pegar o CSRF para login'
+                        });
 
-                    url = 'https://forum.talonro.com/login/';
+                    } else {
 
-                    var csrfExpRes = csrfKeyRegExp.exec(html);
-                    csrf = csrfExpRes[0].substring(22, 54);
+                        url = 'https://forum.talonro.com/login/';
 
-                    var refExpRes = refRegExp.exec(html);
-                    ref = refExpRes[0].substring(18, 62);
+                        var csrfExpRes = csrfKeyRegExp.exec(html);
+                        //  TODO: Melhorar isso
+                        csrf = csrfExpRes[0].substring(22, 54);
 
-                    var loginData = {
-                        auth: body.username.trim(),
-                        password: body.password.trim(),
-                        login__standard_submitted: '1',
-                        csrfKey: csrf,
-                        ref: ref
-                    };
+                        var refExpRes = refRegExp.exec(html);
+                        //  TODO: Melhorar isso
+                        ref = refExpRes[0].substring(18, 62);
 
-                    request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
-
-                        url = 'https://panel.talonro.com/voting/';
-                        var votingData = {
-                            agree_vote: 1
+                        var loginData = {
+                            auth: body.username.trim(),
+                            password: body.password.trim(),
+                            login__standard_submitted: '1',
+                            csrfKey: csrf,
+                            ref: ref
                         };
 
-                        request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
+                        request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
 
                             url = 'https://panel.talonro.com/voting/';
-                            var counter = 0;
+                            var votingData = {
+                                agree_vote: 1
+                            };
 
-                            while (counter <= 5){
+                            request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
 
-                                request.get({url: url + counter + '/', followAllRedirects: true}, function(err, httpResponse, html){
+                                url = 'https://panel.talonro.com/voting/';
+                                var counter = 0;
 
-                                });
+                                while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
 
-                                counter++;
+                                    request.get({url: url + counter, followAllRedirects: true}, function(err, httpResponse, html){});
 
-                            }
+                                    counter++;
 
-                            return res.status(200).json({msg: 'Feito!'});
+                                }
 
+                            });
                         });
-                    });
-                }
-            });
+                    }
+                });
+
+                interval = 43380000;
+
+            }, interval);
         }
 }
