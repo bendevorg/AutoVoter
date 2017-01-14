@@ -4,6 +4,8 @@ jar = request.jar();
 
 var url = '';
 const NUMBER_OF_WEBSITES_TO_VOTE = 5;
+const VOTE_PAGE = 'https://panel.talonro.com/voting/';
+const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
 exports.vote = (req, res) => {
 
@@ -11,11 +13,11 @@ exports.vote = (req, res) => {
 
         if (!_.isString(body.username) || body.username.trim().length == 0){
 
-            return res.status(400).json({msg: 'Invalid username'});
+            return res.status(400).json({msg: 'Username inválido'});
             
         } else if (!_.isString(body.password) || body.password.trim().length == 0){
 
-            return res.status(400).json({msg: 'Invalid password'});
+            return res.status(400).json({msg: 'Password inválido'});
 
         } else {
 
@@ -29,7 +31,7 @@ exports.vote = (req, res) => {
      
                 try {
 
-                    url = 'https://panel.talonro.com/voting/';
+                    url = VOTE_PAGE;
 
                     request.get({url: url}, function(err, httpResponse, html){
 
@@ -58,7 +60,7 @@ exports.vote = (req, res) => {
 
                             } else {
 
-                                url = 'https://forum.talonro.com/login/';
+                                url = LOGIN_PAGE;
 
                                 var csrfExpRes = csrfKeyRegExp.exec(html);
                                 //  TODO: Melhorar isso
@@ -85,9 +87,11 @@ exports.vote = (req, res) => {
 
                                     } else {
 
-                                        url = 'https://panel.talonro.com/voting/';
+                                        //  TODO: Verificar se o login realmente foi feito
+
+                                        url = VOTE_PAGE;
                                         var votingData = {
-                                            agree_vote: 1
+                                            agree_vote: '1'
                                         };
 
                                         request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
@@ -99,7 +103,7 @@ exports.vote = (req, res) => {
 
                                             } else {
 
-                                                url = 'https://panel.talonro.com/voting/';
+                                                url = VOTE_PAGE;
                                                 var counter = 0;
 
                                                 while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
@@ -112,6 +116,8 @@ exports.vote = (req, res) => {
                                                             clearInterval(loopVote);
 
                                                         }
+
+                                                        //  TODO: Verificar se a votacao realmente foi feita
 
                                                     });
 
