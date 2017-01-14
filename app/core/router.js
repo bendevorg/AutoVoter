@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 //  Root API
-app.post('/voteOnce', controllers.voter.vote);
+app.post('/voteLoop', controllers.voter.vote);
 
 app.get('/haha', controllers.teste.test);
 

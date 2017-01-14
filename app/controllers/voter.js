@@ -19,78 +19,121 @@ exports.vote = (req, res) => {
 
         } else {
 
+            res.status(200).json({
+                msg: 'Looping de votação iniciado'
+            });
+
             var interval = 10;
 
             var loopVote = setInterval(() => {
      
-                url = 'https://panel.talonro.com/voting/';
+                try {
 
-                request.get({url: url}, function(err, httpResponse, html){
+                    url = 'https://panel.talonro.com/voting/';
 
-                    var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
-                    var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
+                    request.get({url: url}, function(err, httpResponse, html){
 
-                    var csrf = '';
-                    var ref = '';
+                        if (err){
 
-                    if (!csrfKeyRegExp.test(html)) {
+                            console.log('Erro ao acessar o painel inicial');
+                            clearInterval(loopVote);
 
-                        return res.status(400).json({
-                            msg: 'Erro ao pegar o CSRF para login'
-                        });
+                        } else {        
 
-                    } else if (!refRegExp.test(html)){
+                            var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
+                            var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
 
-                        return res.status(400).json({
-                            msg: 'Erro ao pegar o CSRF para login'
-                        });
+                            var csrf = '';
+                            var ref = '';
 
-                    } else {
+                            if (!csrfKeyRegExp.test(html)) {
 
-                        url = 'https://forum.talonro.com/login/';
+                                console.log('Erro ao pegar o CRF para login');
+                                clearInterval(loopVote);
 
-                        var csrfExpRes = csrfKeyRegExp.exec(html);
-                        //  TODO: Melhorar isso
-                        csrf = csrfExpRes[0].substring(22, 54);
+                            } else if (!refRegExp.test(html)){
 
-                        var refExpRes = refRegExp.exec(html);
-                        //  TODO: Melhorar isso
-                        ref = refExpRes[0].substring(18, 62);
+                                console.log('Erro ao pegar o REF para login');
+                                clearInterval(loopVote);
 
-                        var loginData = {
-                            auth: body.username.trim(),
-                            password: body.password.trim(),
-                            login__standard_submitted: '1',
-                            csrfKey: csrf,
-                            ref: ref
-                        };
+                            } else {
 
-                        request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
+                                url = 'https://forum.talonro.com/login/';
 
-                            url = 'https://panel.talonro.com/voting/';
-                            var votingData = {
-                                agree_vote: 1
-                            };
+                                var csrfExpRes = csrfKeyRegExp.exec(html);
+                                //  TODO: Melhorar isso
+                                csrf = csrfExpRes[0].substring(22, 54);
 
-                            request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
+                                var refExpRes = refRegExp.exec(html);
+                                //  TODO: Melhorar isso
+                                ref = refExpRes[0].substring(18, 62);
 
-                                url = 'https://panel.talonro.com/voting/';
-                                var counter = 0;
+                                var loginData = {
+                                    auth: body.username.trim(),
+                                    password: body.password.trim(),
+                                    login__standard_submitted: '1',
+                                    csrfKey: csrf,
+                                    ref: ref
+                                };
 
-                                while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
+                                request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
 
-                                    request.get({url: url + counter, followAllRedirects: true}, function(err, httpResponse, html){});
+                                    if (err){
 
-                                    counter++;
+                                        console.log('Erro ao realizar o login');
+                                        clearInterval(loopVote);
 
-                                }
+                                    } else {
 
-                            });
-                        });
-                    }
-                });
+                                        url = 'https://panel.talonro.com/voting/';
+                                        var votingData = {
+                                            agree_vote: 1
+                                        };
 
-                interval = 43380000;
+                                        request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
+
+                                            if (err){
+
+                                                console.log('Erro ao acessar a página de votação');
+                                                clearInterval(loopVote);
+
+                                            } else {
+
+                                                url = 'https://panel.talonro.com/voting/';
+                                                var counter = 0;
+
+                                                while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
+
+                                                    request.get({url: url + counter, followAllRedirects: true}, function(err, httpResponse, html){
+
+                                                        if (err){
+
+                                                            console.log('Erro ao votar no site número ' + counter);
+                                                            clearInterval(loopVote);
+
+                                                        }
+
+                                                    });
+
+                                                    counter++;
+
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    interval = 43380000;
+
+                } catch (e){
+
+                    console.log('Ih bixo erro não tratado: ' + e);
+                    clearInterval(loopVote);
+
+                }
 
             }, interval);
         }
