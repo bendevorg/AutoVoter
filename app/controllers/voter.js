@@ -136,7 +136,7 @@ exports.vote = (req, res) => {
 
                 } catch (e){
 
-                    console.log('Ih bixo erro não tratado: ' + e);
+                    console.log('Erro não tratado: ' + e);
                     clearInterval(loopVote);
 
                 }
