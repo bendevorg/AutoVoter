@@ -148,6 +148,9 @@ voter = (username, password) => {
                                         counter++;
 
                                     }
+
+                                    console.log('Votação finalizada com o ' + username);
+
                                 }
                             });
                         }
