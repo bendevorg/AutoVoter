@@ -50,7 +50,9 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            cron.schedule('5 */12 * * *', voter(body.username.trim(), body.password.trim()));
+            cron.schedule('5 */12 * * *', function(){
+                voter(body.username.trim(), body.password.trim());
+            });
 
         }
 };
