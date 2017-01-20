@@ -24,7 +24,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 //  Root API
-app.post('/voteLoop', controllers.voter.vote);
+app.post('/voteOnce', controllers.voter.voteOnce);
+app.post('/voteLoop', controllers.voter.voteLoop);
 
 //  Boots server
 app.listen(PORT, () => {
