@@ -7,12 +7,12 @@ const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
-//const TELEGRAM_CHAT_RAG = -194095782;
-const TELEGRAM_CHAT_RAG = 64023934;
+const TELEGRAM_CHAT_RAG = -194095782;
 const TELEGRAM_URL = 'http://ec2-52-67-130-125.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
 
 var cron = require('node-cron');
 var moment = require('moment');
+var tz = require('moment-timezone');
 moment.locale('pt-br');
 
 exports.voteOnce = (req, res) => {
@@ -157,8 +157,11 @@ voter = (username, password) => {
 
                                     }
 
+                                    console.log('Votação efetuada para a conta ' + username);
+
+                                    //  Deveria ser 12 horas para como o servidor da Amazon fica em UTC -2
                                     var confirmationMessage = {
-                                        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
+                                        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
                                         chatId: TELEGRAM_CHAT_RAG
                                     };
 
