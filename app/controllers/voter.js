@@ -1,3 +1,6 @@
+var getVotes = require('./getVotes.js').getVotes;
+var login = require('./login.js').login;
+
 var request = require('request');
 request = request.defaults({jar: true});
 jar = request.jar();
@@ -5,10 +8,18 @@ jar = request.jar();
 var url = '';
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
+const BETA_VOTE_PAGE = 'https://beta.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
 const TELEGRAM_CHAT_RAG = -194095782;
 const TELEGRAM_URL = 'http://ec2-52-67-130-125.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
+
+const BETA_PAGES_REGEXP = [/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopG"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopServers200"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="Top100Arena"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="XtremeTop100"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="GamesTop100"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="GameSites100"/g];
 
 var cron = require('node-cron');
 var moment = require('moment');
@@ -53,7 +64,7 @@ exports.voteLoop = (req, res) => {
         } else {
 
             res.status(200).json({
-                msg: 'Looping de votação iniciadadasdasdas.'
+                msg: 'Looping de votação iniciada.'
             });
             
             cron.schedule('5 */12 * * *', function(){
@@ -136,22 +147,37 @@ voter = (username, password) => {
 
                                 } else {
 
-                                    url = VOTE_PAGE;
-                                    var counter = 0;
+                                    url = BETA_VOTE_PAGE;
+                                    var counter = 1;
 
-                                    while (counter < NUMBER_OF_WEBSITES_TO_VOTE){
+                                    var headers = {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    };
 
-                                        request.get({url: url + counter, followAllRedirects: true}, function(err, httpResponse, html){
+                                    while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
 
-                                            if (err){
+                                        var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
+                                        var token = tokenRegExp.exec(html);
 
-                                                console.log('Erro ao votar no site número ' + counter);
+                                        if (token){
 
-                                            }
+                                            var voteFormData = {
+                                                site: counter,
+                                                token: token[1]
+                                            };
 
-                                            //  TODO: Verificar se a votacao realmente foi feita
+                                            request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
 
-                                        });
+                                                if (err){
+
+                                                    console.log('Erro ao votar no site número ' + counter);
+
+                                                }
+
+                                            });
+
+                                        }
 
                                         counter++;
 
@@ -159,13 +185,21 @@ voter = (username, password) => {
 
                                     console.log('Votação efetuada para a conta ' + username);
 
-                                    //  Deveria ser 12 horas para como o servidor da Amazon fica em UTC -2
-                                    var confirmationMessage = {
-                                        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
-                                        chatId: TELEGRAM_CHAT_RAG
-                                    };
+                                        //  Deveria ser 12 horas para como o servidor da Amazon fica em UTC -2
+                                        var confirmationMessage = {
+                                            message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
+                                            chatId: TELEGRAM_CHAT_RAG
+                                        };
 
-                                    request.post({url: TELEGRAM_URL, form: confirmationMessage}, function(err, httpResponse, html){
+                                    getVotes(VOTE_PAGE, request).then((votes) => {
+
+                                        confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
+                                        sendTelegramMessage(confirmationMessage);
+
+                                    }, (err) => {
+
+                                        confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
+                                        sendTelegramMessage(confirmationMessage);
 
                                     });
 
@@ -182,5 +216,11 @@ voter = (username, password) => {
         return console.log('Erro não tratado: ' + e);
 
     }
+
+};
+
+var sendTelegramMessage = (message) => {
+
+    request.post({url: TELEGRAM_URL, form: message}, function(err, httpResponse, html){});
 
 };
