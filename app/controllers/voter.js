@@ -147,7 +147,7 @@ voter = (username, password) => {
 
                                 } else {
 
-                                    url = BETA_VOTE_PAGE;
+                                    url = VOTE_PAGE;
                                     var counter = 1;
 
                                     var headers = {
@@ -155,7 +155,7 @@ voter = (username, password) => {
                                         'Content-Type': 'application/x-www-form-urlencoded'
                                     };
 
-                                    while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
+                                    while (counter <= 1){
 
                                         var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
                                         var token = tokenRegExp.exec(html);
@@ -167,11 +167,20 @@ voter = (username, password) => {
                                                 token: token[1]
                                             };
 
+                                            console.log(voteFormData);
+
+                                            var voted = false;
+
                                             request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
 
                                                 if (err){
 
-                                                    console.log('Erro ao votar no site número ' + counter);
+                                                    console.log(err);
+                                                    console.log('Erro ao votar no site número ' + voteFormData.site);
+
+                                                } else {
+
+                                                    voted = true;
 
                                                 }
 
@@ -185,7 +194,7 @@ voter = (username, password) => {
 
                                     console.log('Votação efetuada para a conta ' + username);
 
-                                        //  Deveria ser 12 horas para como o servidor da Amazon fica em UTC -2
+                                        //  Soma 12 horas para indicar o próximo vote
                                         var confirmationMessage = {
                                             message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
                                             chatId: TELEGRAM_CHAT_RAG
@@ -194,12 +203,12 @@ voter = (username, password) => {
                                     getVotes(VOTE_PAGE, request).then((votes) => {
 
                                         confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
-                                        sendTelegramMessage(confirmationMessage);
+                                        //sendTelegramMessage(confirmationMessage);
 
                                     }, (err) => {
 
                                         confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
-                                        sendTelegramMessage(confirmationMessage);
+                                        //sendTelegramMessage(confirmationMessage);
 
                                     });
 
