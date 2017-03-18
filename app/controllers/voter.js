@@ -8,7 +8,6 @@ jar = request.jar();
 var url = '';
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
-const BETA_VOTE_PAGE = 'https://beta.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
 const TELEGRAM_CHAT_RAG = -194095782;
@@ -155,7 +154,7 @@ voter = (username, password) => {
                                         'Content-Type': 'application/x-www-form-urlencoded'
                                     };
 
-                                    while (counter <= 1){
+                                    while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
 
                                         var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
                                         var token = tokenRegExp.exec(html);
@@ -167,20 +166,12 @@ voter = (username, password) => {
                                                 token: token[1]
                                             };
 
-                                            console.log(voteFormData);
-
-                                            var voted = false;
-
                                             request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
 
                                                 if (err){
 
                                                     console.log(err);
                                                     console.log('Erro ao votar no site número ' + voteFormData.site);
-
-                                                } else {
-
-                                                    voted = true;
 
                                                 }
 
@@ -203,12 +194,12 @@ voter = (username, password) => {
                                     getVotes(VOTE_PAGE, request).then((votes) => {
 
                                         confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
-                                        //sendTelegramMessage(confirmationMessage);
+                                        sendTelegramMessage(confirmationMessage);
 
                                     }, (err) => {
 
                                         confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
-                                        //sendTelegramMessage(confirmationMessage);
+                                        sendTelegramMessage(confirmationMessage);
 
                                     });
 
