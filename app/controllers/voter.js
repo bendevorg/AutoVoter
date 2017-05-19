@@ -14,7 +14,7 @@ const TELEGRAM_CHAT_RAG = -194095782;
 const TELEGRAM_URL = 'http://ec2-52-67-130-125.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
 
 const BETA_PAGES_REGEXP = [/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopG"/g,
-/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopServers200"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="MmoToplist"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="Top100Arena"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="XtremeTop100"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="GamesTop100"/g,
@@ -66,9 +66,12 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            cron.schedule('5 */12 * * *', function(){
-                voter(body.username.trim(), body.password.trim());
-            });
+            //cron.schedule('5 */12 * * *', function(){
+            //    voter(body.username.trim(), body.password.trim());
+            //});
+
+            setInterval(voter(username, password)
+            ,43500000);
 
         }
 };
@@ -146,63 +149,8 @@ voter = (username, password) => {
 
                                 } else {
 
-                                    url = VOTE_PAGE;
-                                    var counter = 1;
-
-                                    var headers = {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-                                        'Content-Type': 'application/x-www-form-urlencoded'
-                                    };
-
-                                    while (counter <= NUMBER_OF_WEBSITES_TO_VOTE){
-
-                                        var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
-                                        var token = tokenRegExp.exec(html);
-
-                                        if (token){
-
-                                            var voteFormData = {
-                                                site: counter,
-                                                token: token[1]
-                                            };
-
-                                            request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
-
-                                                if (err){
-
-                                                    console.log(err);
-                                                    console.log('Erro ao votar no site número ' + voteFormData.site);
-
-                                                }
-
-                                            });
-
-                                        }
-
-                                        counter++;
-
-                                    }
-
-                                    console.log('Votação efetuada para a conta ' + username);
-
-                                        //  Soma 12 horas para indicar o próximo vote
-                                        var confirmationMessage = {
-                                            message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
-                                            chatId: TELEGRAM_CHAT_RAG
-                                        };
-
-                                    getVotes(VOTE_PAGE, request).then((votes) => {
-
-                                        confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
-                                        sendTelegramMessage(confirmationMessage);
-
-                                    }, (err) => {
-
-                                        confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
-                                        sendTelegramMessage(confirmationMessage);
-
-                                    });
-
+                                    voteOnSite (html, 1, username);
+                                    
                                 }
                             });
                         }
@@ -217,6 +165,97 @@ voter = (username, password) => {
 
     }
 
+};
+
+var voteOnSite = (tokenHtml, counter, username) => {
+
+    if (counter <= NUMBER_OF_WEBSITES_TO_VOTE) {
+
+        counter++;
+
+        url = VOTE_PAGE;
+
+        var headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        };
+
+        var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
+        var token = tokenRegExp.exec(tokenHtml);
+
+        if (token){
+
+            var voteFormData = {
+                site: counter,
+                token: token[1]
+            };
+
+            request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
+
+                if (err){
+
+                    console.log(err);
+                    console.log('Erro ao votar no site número ' + voteFormData.site);
+
+                }
+
+                voteOnSite(tokenHtml, counter, username);
+
+            });
+
+        } else {
+
+            voteOnSite(tokenHtml, counter, username);
+
+        }
+
+    } else {
+
+        finishVote(username);
+
+    }
+}
+
+var finishVote = (username) => {
+
+    console.log('Votação efetuada para a conta ' + username);
+
+    //  Soma 12 horas para indicar o próximo vote
+    var confirmationMessage = {
+        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
+        chatId: TELEGRAM_CHAT_RAG
+    };
+
+    getVotes(VOTE_PAGE, request).then((votes) => {
+
+        confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
+        sendTelegramMessage(confirmationMessage);
+
+    }, (err) => {
+
+        confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
+        sendTelegramMessage(confirmationMessage);
+
+    });
+
+}
+
+var getToken = (html) => {
+    var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
+    var token = getToken(html)
+
+    if (token){
+
+        return {
+            site: counter,
+            token: token[1]
+        };
+
+    } else {
+
+        return undefined;
+
+    }
 };
 
 var sendTelegramMessage = (message) => {
