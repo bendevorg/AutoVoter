@@ -70,7 +70,7 @@ exports.voteLoop = (req, res) => {
             //    voter(body.username.trim(), body.password.trim());
             //});
 
-            setInterval(voter(username, password)
+            setInterval(voter(body.username.trim(), body.password.trim())
             ,43500000);
 
         }
