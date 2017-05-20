@@ -66,12 +66,9 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            //cron.schedule('5 */12 * * *', function(){
-            //    voter(body.username.trim(), body.password.trim());
-            //});
-
-            setInterval(voter(body.username.trim(), body.password.trim())
-            ,43500000);
+            cron.schedule('*/5 */12 * * *', function(){
+                setTimeout(voter(body.username.trim(), body.password.trim()), 2000);
+            });
 
         }
 };
@@ -222,7 +219,7 @@ var finishVote = (username) => {
 
     //  Soma 12 horas para indicar o próximo vote
     var confirmationMessage = {
-        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
+        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(2, 'minutes').calendar().toLowerCase(),
         chatId: TELEGRAM_CHAT_RAG
     };
 
