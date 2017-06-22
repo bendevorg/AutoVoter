@@ -1,17 +1,13 @@
 var getVotes = require('./getVotes.js').getVotes;
 var login = require('./login.js').login;
 
-var request = require('request');
-request = request.defaults({jar: true});
-jar = request.jar();
-
 var url = '';
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
 const TELEGRAM_CHAT_RAG = -194095782;
-const TELEGRAM_URL = 'http://ec2-52-67-130-125.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
+const TELEGRAM_URL = 'http://ec2-54-232-231-87.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
 
 const BETA_PAGES_REGEXP = [/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopG"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="MmoToplist"/g,
@@ -67,13 +63,17 @@ exports.voteLoop = (req, res) => {
             });
             
             cron.schedule('*/5 */12 * * *', function(){
-                setTimeout(voter(body.username.trim(), body.password.trim()), 2000);
+                voter(body.username.trim(), body.password.trim());
             });
 
         }
 };
 
 voter = (username, password) => {
+
+    let request = require('request');
+    request = request.defaults({jar: true});
+    jar = request.jar();
 
     try {
 
@@ -146,7 +146,7 @@ voter = (username, password) => {
 
                                 } else {
 
-                                    voteOnSite (html, 1, username);
+                                    voteOnSite (html, 1, username, request);
                                     
                                 }
                             });
@@ -164,74 +164,66 @@ voter = (username, password) => {
 
 };
 
-var voteOnSite = (tokenHtml, counter, username) => {
+var voteOnSite = (tokenHtml, counter, username, request) => {
 
-    if (counter <= NUMBER_OF_WEBSITES_TO_VOTE) {
+    try {
 
-        counter++;
+        if (counter <= NUMBER_OF_WEBSITES_TO_VOTE) {
+            counter++;
+            url = VOTE_PAGE;
 
-        url = VOTE_PAGE;
-
-        var headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
-
-        var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
-        var token = tokenRegExp.exec(tokenHtml);
-
-        if (token){
-
-            var voteFormData = {
-                site: counter,
-                token: token[1]
+            var headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+                'Content-Type': 'application/x-www-form-urlencoded'
             };
 
-            request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
+            var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
+            var token = tokenRegExp.exec(tokenHtml);
 
-                if (err){
+            if (token){
+                var voteFormData = {
+                    site: counter,
+                    token: token[1]
+                };
 
-                    console.log(err);
-                    console.log('Erro ao votar no site número ' + voteFormData.site);
-
-                }
-
-                voteOnSite(tokenHtml, counter, username);
-
-            });
-
+                request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
+                    if (err){
+                        console.log(err);
+                        console.log('Erro ao votar no site número ' + voteFormData.site);
+                    }
+                    return voteOnSite(tokenHtml, counter, username, request);
+                });
+            } else {
+                return voteOnSite(tokenHtml, counter, username, request);
+            }
         } else {
-
-            voteOnSite(tokenHtml, counter, username);
-
+            return finishVote(username, request);
         }
-
-    } else {
-
-        finishVote(username);
-
+    }catch(e){
+        return voteOnSite(tokenHtml, counter, username, request);
     }
+    
 }
 
-var finishVote = (username) => {
+var finishVote = (username, request) => {
 
     console.log('Votação efetuada para a conta ' + username);
 
     //  Soma 12 horas para indicar o próximo vote
     var confirmationMessage = {
-        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(2, 'minutes').calendar().toLowerCase(),
+        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
         chatId: TELEGRAM_CHAT_RAG
     };
 
     getVotes(VOTE_PAGE, request).then((votes) => {
 
         confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
-        sendTelegramMessage(confirmationMessage);
+        sendTelegramMessage(confirmationMessage, request);
 
     }, (err) => {
 
         confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
-        sendTelegramMessage(confirmationMessage);
+        sendTelegramMessage(confirmationMessage, request);
 
     });
 
@@ -255,7 +247,7 @@ var getToken = (html) => {
     }
 };
 
-var sendTelegramMessage = (message) => {
+var sendTelegramMessage = (message, request) => {
 
     request.post({url: TELEGRAM_URL, form: message}, function(err, httpResponse, html){});
 
