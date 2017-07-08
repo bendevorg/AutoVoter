@@ -63,7 +63,7 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            cron.schedule('*/5 */12 * * *', function(){
+            cron.schedule('*/726 * * * *', function(){
                 voter(body.username.trim(), body.password.trim());
             });
 
@@ -213,7 +213,7 @@ var finishVote = (username, request) => {
 
     //  Soma 12 horas para indicar o próximo vote
     var confirmationMessage = {
-        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(5, 'minutes').calendar().toLowerCase(),
+        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(6, 'minutes').calendar().toLowerCase(),
         chatId: TELEGRAM_CHAT_RAG
     };
 
