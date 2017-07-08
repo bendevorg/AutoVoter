@@ -2,6 +2,7 @@ var getVotes = require('./getVotes.js').getVotes;
 var login = require('./login.js').login;
 
 var url = '';
+const NUMBER_OF_LOOPS_REQUIRED = 5;
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
@@ -146,7 +147,7 @@ voter = (username, password) => {
 
                                 } else {
 
-                                    voteOnSite (html, 1, username, request);
+                                    voteOnSite (html, 0, username, request, 0);
                                     
                                 }
                             });
@@ -159,50 +160,51 @@ voter = (username, password) => {
     } catch (e){
 
         return console.log('Erro não tratado: ' + e);
-
     }
-
 };
 
-var voteOnSite = (tokenHtml, counter, username, request) => {
+var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
 
+    //  Vamos rodar o looping de votação 5 vezes para garantir que essa porcaria vote (problema do servidor dos caras)
     try {
+        if (voteLoopCounter < NUMBER_OF_LOOPS_REQUIRED) {
+            if (counter < NUMBER_OF_WEBSITES_TO_VOTE) {
+                counter++;
+                url = VOTE_PAGE;
 
-        if (counter <= NUMBER_OF_WEBSITES_TO_VOTE) {
-            counter++;
-            url = VOTE_PAGE;
-
-            var headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            };
-
-            var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
-            var token = tokenRegExp.exec(tokenHtml);
-
-            if (token){
-                var voteFormData = {
-                    site: counter,
-                    token: token[1]
+                var headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 };
 
-                request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
-                    if (err){
-                        console.log(err);
-                        console.log('Erro ao votar no site número ' + voteFormData.site);
-                    }
-                    return voteOnSite(tokenHtml, counter, username, request);
-                });
+                var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
+                var token = tokenRegExp.exec(tokenHtml);
+
+                if (token){
+                    var voteFormData = {
+                        site: counter,
+                        token: token[1]
+                    };
+
+                    request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
+                        if (err){
+                            console.log(err);
+                            console.log('Erro ao votar no site número ' + voteFormData.site);
+                        }
+                    });
+                    return voteOnSite(tokenHtml, counter, username, request, voteLoopCounter);
+                } else {
+                    return voteOnSite(tokenHtml, counter, username, request, voteLoopCounter);
+                }
             } else {
-                return voteOnSite(tokenHtml, counter, username, request);
+                return voteOnSite(tokenHtml, 0, username, request, voteLoopCounter + 1);
             }
         } else {
             return finishVote(username, request);
         }
     }catch(e){
-        return voteOnSite(tokenHtml, counter, username, request);
-    }
-    
+        return voteOnSite(tokenHtml, counter, username, request, voteLoopCounter);
+    }   
 }
 
 var finishVote = (username, request) => {
