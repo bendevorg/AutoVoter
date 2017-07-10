@@ -2,7 +2,7 @@ var getVotes = require('./getVotes.js').getVotes;
 var login = require('./login.js').login;
 
 var url = '';
-const NUMBER_OF_LOOPS_REQUIRED = 5;
+const NUMBER_OF_LOOPS_REQUIRED = 6;
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
@@ -63,9 +63,12 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            cron.schedule('*/726 * * * *', function(){
-                voter(body.username.trim(), body.password.trim());
-            });
+            //cron.schedule('*/726 * * * *', function(){
+            //    voter(body.username.trim(), body.password.trim());
+            //});
+
+            setInterval(voter(body.username.trim(), body.password.trim()), 
+            43560000);
 
         }
 };
