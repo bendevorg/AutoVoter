@@ -63,12 +63,16 @@ exports.voteLoop = (req, res) => {
                 msg: 'Looping de votação iniciada.'
             });
             
-            //cron.schedule('*/726 * * * *', function(){
-            //    voter(body.username.trim(), body.password.trim());
-            //});
+            cron.schedule('*/60 * * * *', function(){
+                voter(body.username.trim(), body.password.trim());
+            });
 
-            setInterval(voter(body.username.trim(), body.password.trim()), 
-            43560000);
+            cron.schedule('* */12 * * *', function(){
+                sendReport(body.username.trim(), body.password.trim());
+            });
+
+            //setInterval(voter(body.username.trim(), body.password.trim()), 
+            //43560000);
 
         }
 };
@@ -136,7 +140,6 @@ voter = (username, password) => {
                         } else {
 
                             //  TODO: Verificar se o login realmente foi feito
-
                             url = VOTE_PAGE;
                             var votingData = {
                                 agree_vote: '1'
@@ -203,20 +206,20 @@ var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
                 return voteOnSite(tokenHtml, 0, username, request, voteLoopCounter + 1);
             }
         } else {
-            return finishVote(username, request);
+            //return finishVote(username, request);
+            return;
         }
     }catch(e){
         return voteOnSite(tokenHtml, counter, username, request, voteLoopCounter);
     }   
 }
 
-var finishVote = (username, request) => {
-
-    console.log('Votação efetuada para a conta ' + username);
-
-    //  Soma 12 horas para indicar o próximo vote
+/**var finishVote = (username, request) => {
+    
     var confirmationMessage = {
-        message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(6, 'minutes').calendar().toLowerCase(),
+        //  Soma 12 horas para indicar o próximo vote
+        //message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(6, 'minutes').calendar().toLowerCase(),
+        message: 'Relatório diário dos pontos.',
         chatId: TELEGRAM_CHAT_RAG
     };
 
@@ -232,6 +235,35 @@ var finishVote = (username, request) => {
 
     });
 
+}
+**/
+
+function sendReport(username, password) {
+
+    let request = require('request');
+    request = request.defaults({jar: true});
+
+    login(VOTE_PAGE, LOGIN_PAGE, username, password, request).then((request) => {       
+        let confirmationMessage = {
+            message: 'Relatório diário dos pontos para a conta ' + username,
+            chatId: TELEGRAM_CHAT_RAG
+        };  
+        getVotes(VOTE_PAGE, request).then((votes) => {
+            confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
+            sendTelegramMessage(confirmationMessage, request);
+        }, (err) => {
+            confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
+            sendTelegramMessage(confirmationMessage, request);
+        });
+    }, (err) => {
+        console.log(err);
+        let confirmationMessage = {
+            message: 'Relatório diário dos pontos para a conta ' + username,
+            chatId: TELEGRAM_CHAT_RAG
+        };  
+        confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
+        sendTelegramMessage(confirmationMessage, request);
+    });
 }
 
 var getToken = (html) => {
