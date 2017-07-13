@@ -67,7 +67,7 @@ exports.voteLoop = (req, res) => {
                 voter(body.username.trim(), body.password.trim());
             });
 
-            cron.schedule('* */12 * * *', function(){
+            cron.schedule('0 */24 * * *', function(){
                 sendReport(body.username.trim(), body.password.trim());
             });
 
