@@ -24,6 +24,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 //  Root API
+app.get('/', (req, res) => {
+    return res.status(200).json({
+        msg: 'Test'
+    });
+});
 app.post('/voteOnce', controllers.voter.voteOnce);
 app.post('/voteLoop', controllers.voter.voteLoop);
 
