@@ -14,7 +14,7 @@ const TELEGRAM_CHAT_RAG = -194095782;
 const TELEGRAM_URL = 'http://ec2-52-67-130-125.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
 
 const BETA_PAGES_REGEXP = [/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopG"/g,
-/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="TopServers200"/g,
+/name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="MmoToplist"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="Top100Arena"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="XtremeTop100"/g,
 /name="token" value="([^"]+)">\n\t\t\t\t\t\t\t\t\t\t<input type="submit" value="GamesTop100"/g,
