@@ -20,7 +20,8 @@ exports.login = (VOTE_PAGE, LOGIN_PAGE, username, password, request) => {
 
                 if (!csrfKeyRegExp.test(html)) {
 
-                    return reject(err);
+                    //  Assume we are logged in
+                    return resolve(request);
 
                 } else if (!refRegExp.test(html)){
 
