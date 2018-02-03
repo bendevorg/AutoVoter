@@ -1,8 +1,8 @@
-exports.getVotes = (VOTE_PAGE, request) => {
+exports.getVotes = (VOTE_LIST_PAGE, request) => {
 
     return new Promise((resolve, reject) => {
 
-        url = VOTE_PAGE;
+        url = VOTE_LIST_PAGE;
 
         request.get({url: url, followAllRedirects: true}, (err, httpResponse, html) => {
 

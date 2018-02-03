@@ -4,6 +4,7 @@ var login = require('./login.js').login;
 var url = '';
 const NUMBER_OF_LOOPS_REQUIRED = 6;
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
+const VOTE_LIST_PAGE = 'https://forum.talonro.com/forum/25-vote-for-talonro/';
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
 const LOGIN_PAGE = 'https://forum.talonro.com/login/';
 
@@ -39,7 +40,7 @@ exports.voteOnce = (req, res) => {
             res.status(200).json({
                 msg: 'Votação efetuada.'
             });
-            
+            sendReport(body.username.trim(), body.password.trim());
             voter(body.username.trim(), body.password.trim());
 
         }
@@ -85,7 +86,7 @@ voter = (username, password) => {
 
     try {
 
-        url = VOTE_PAGE;
+        url = VOTE_LIST_PAGE;
 
         console.log('Votando com o ' + username);
 
@@ -99,9 +100,13 @@ voter = (username, password) => {
 
                 var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
                 var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
+                var maxFileSizeRegExp = new RegExp(/name="MAX_FILE_SIZE" value="([^']*)">/);
+                var pluploadRegExp = new RegExp(/name="plupload" value="([^']*)">/);
 
                 var csrf = '';
                 var ref = '';
+                var maxFileSize = '';
+                var plupload = '';
 
                 if (!csrfKeyRegExp.test(html)) {
 
@@ -110,6 +115,14 @@ voter = (username, password) => {
                 } else if (!refRegExp.test(html)){
 
                     return console.log('Erro ao pegar o REF para login');
+
+                } else if (!pluploadRegExp.test(html)){
+
+                    return console.log('Erro ao pegar o PLUPLOAD para login');
+
+                } else if (!maxFileSizeRegExp.test(html)){
+
+                    return console.log('Erro ao pegar o MAXFILESIZE para login');
 
                 } else {
 
@@ -121,14 +134,24 @@ voter = (username, password) => {
 
                     var refExpRes = refRegExp.exec(html);
                     //  TODO: Melhorar isso
-                    ref = refExpRes[0].substring(18, 62);
+                    ref = refExpRes[0].substring(18, 54);
+
+                    var maxFileSizeExpRes = maxFileSizeRegExp.exec(html);
+                    maxFileSize = maxFileSizeExpRes[0].substring(28, 36);
+
+                    var pluploadExpRes = pluploadRegExp.exec(html);
+                    var plupload = pluploadExpRes[0].substring(23, 55);
 
                     var loginData = {
                         auth: username,
                         password: password,
                         login__standard_submitted: '1',
                         csrfKey: csrf,
-                        ref: ref
+                        ref: ref,
+                        MAX_FILE_SIZE: maxFileSize,
+                        plupload: plupload,
+                        remember_me: 0,
+                        remember_me_checkbox: 1
                     };
 
                     request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
@@ -140,14 +163,11 @@ voter = (username, password) => {
                         } else {
 
                             //  TODO: Verificar se o login realmente foi feito
-                            url = VOTE_PAGE;
-                            var votingData = {
-                                agree_vote: '1'
-                            };
+                            url = VOTE_LIST_PAGE;
 
-                            request.post({url: url, followAllRedirects: true, form: votingData}, function(err, httpResponse, html){
-
-                                if (err){
+                            request.get({url: url, followAllRedirects: true}, function(err, httpResponse, html){
+    
+                                if (err){ 
 
                                     return console.log('Erro ao acessar a página de votação');
 
@@ -191,7 +211,7 @@ var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
                         site: counter,
                         token: token[1]
                     };
-
+                    
                     request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
                         if (err){
                             console.log(err);
@@ -223,7 +243,7 @@ var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
         chatId: TELEGRAM_CHAT_RAG
     };
 
-    getVotes(VOTE_PAGE, request).then((votes) => {
+    getVotes(VOTE_LIST_PAGE, request).then((votes) => {
 
         confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
         sendTelegramMessage(confirmationMessage, request);
@@ -243,12 +263,12 @@ function sendReport(username, password) {
     let request = require('request');
     request = request.defaults({jar: true});
 
-    login(VOTE_PAGE, LOGIN_PAGE, username, password, request).then((request) => {       
+    login(VOTE_LIST_PAGE, LOGIN_PAGE, username, password, request).then((request) => {       
         let confirmationMessage = {
             message: 'Relatório diário dos pontos para a conta ' + username,
             chatId: TELEGRAM_CHAT_RAG
         };  
-        getVotes(VOTE_PAGE, request).then((votes) => {
+        getVotes(VOTE_LIST_PAGE, request).then((votes) => {
             confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
             sendTelegramMessage(confirmationMessage, request);
         }, (err) => {
