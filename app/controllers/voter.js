@@ -6,7 +6,8 @@ const NUMBER_OF_LOOPS_REQUIRED = 6;
 const NUMBER_OF_WEBSITES_TO_VOTE = 6;
 const VOTE_LIST_PAGE = 'https://forum.talonro.com/forum/25-vote-for-talonro/';
 const VOTE_PAGE = 'https://panel.talonro.com/voting/';
-const LOGIN_PAGE = 'https://forum.talonro.com/login/';
+const FORUM_PAGE = 'https://forum.talonro.com';
+const LOGIN_PAGE = 'https://forum.talonro.com/login';
 
 const TELEGRAM_CHAT_RAG = -194095782;
 const TELEGRAM_URL = 'http://ec2-54-232-231-87.sa-east-1.compute.amazonaws.com:3101/telegram/message/chat'
@@ -40,8 +41,8 @@ exports.voteOnce = (req, res) => {
             res.status(200).json({
                 msg: 'Votação efetuada.'
             });
-            sendReport(body.username.trim(), body.password.trim());
             voter(body.username.trim(), body.password.trim());
+            sendReport(body.username.trim(), body.password.trim());
 
         }
 };
@@ -72,9 +73,6 @@ exports.voteLoop = (req, res) => {
                 sendReport(body.username.trim(), body.password.trim());
             });
 
-            //setInterval(voter(body.username.trim(), body.password.trim()), 
-            //43560000);
-
         }
 };
 
@@ -86,103 +84,21 @@ voter = (username, password) => {
 
     try {
 
-        url = VOTE_LIST_PAGE;
+        login(FORUM_PAGE, LOGIN_PAGE, username, password, request)
+            .then(request => { 
+                request.get({url: VOTE_LIST_PAGE, followAllRedirects: true}, function(err, httpResponse, html){
+                    if (err){ 
 
-        console.log('Votando com o ' + username);
+                        return console.log('Erro ao acessar a página de votação');
 
-        request.get({url: url}, function(err, httpResponse, html){
-
-            if (err){
-
-                return console.log('Erro ao acessar o painel inicial');
-
-            } else {        
-
-                var csrfKeyRegExp = new RegExp(/name="csrfKey" value="([^']*)">/);
-                var refRegExp = new RegExp(/name="ref" value="([^']*)">/);
-                var maxFileSizeRegExp = new RegExp(/name="MAX_FILE_SIZE" value="([^']*)">/);
-                var pluploadRegExp = new RegExp(/name="plupload" value="([^']*)">/);
-
-                var csrf = '';
-                var ref = '';
-                var maxFileSize = '';
-                var plupload = '';
-
-                if (!csrfKeyRegExp.test(html)) {
-
-                    return console.log('Erro ao pegar o CRF para login');
-
-                } else if (!refRegExp.test(html)){
-
-                    return console.log('Erro ao pegar o REF para login');
-
-                } else if (!pluploadRegExp.test(html)){
-
-                    return console.log('Erro ao pegar o PLUPLOAD para login');
-
-                } else if (!maxFileSizeRegExp.test(html)){
-
-                    return console.log('Erro ao pegar o MAXFILESIZE para login');
-
-                } else {
-
-                    url = LOGIN_PAGE;
-
-                    var csrfExpRes = csrfKeyRegExp.exec(html);
-                    //  TODO: Melhorar isso
-                    csrf = csrfExpRes[0].substring(22, 54);
-
-                    var refExpRes = refRegExp.exec(html);
-                    //  TODO: Melhorar isso
-                    ref = refExpRes[0].substring(18, 54);
-
-                    var maxFileSizeExpRes = maxFileSizeRegExp.exec(html);
-                    maxFileSize = maxFileSizeExpRes[0].substring(28, 36);
-
-                    var pluploadExpRes = pluploadRegExp.exec(html);
-                    var plupload = pluploadExpRes[0].substring(23, 55);
-
-                    var loginData = {
-                        auth: username,
-                        password: password,
-                        login__standard_submitted: '1',
-                        csrfKey: csrf,
-                        ref: ref,
-                        MAX_FILE_SIZE: maxFileSize,
-                        plupload: plupload,
-                        remember_me: 0,
-                        remember_me_checkbox: 1
-                    };
-
-                    request.post({url: url, followAllRedirects: true, form: loginData}, function(err, httpResponse, html){
-
-                        if (err){
-
-                            return console.log('Erro ao realizar o login');
-
-                        } else {
-
-                            //  TODO: Verificar se o login realmente foi feito
-                            url = VOTE_LIST_PAGE;
-
-                            request.get({url: url, followAllRedirects: true}, function(err, httpResponse, html){
-    
-                                if (err){ 
-
-                                    return console.log('Erro ao acessar a página de votação');
-
-                                } else {
-
-                                    voteOnSite (html, 0, username, request, 0);
-                                    
-                                }
-                            });
-                        }
-                    });
-                }
-            }
-        });
-
+                    } else {
+                        voteOnSite (html, 0, username, request, 0);
+                        
+                    }
+                });
+            }).catch(err => {
+                console.log(err);
+            });
     } catch (e){
 
         return console.log('Erro não tratado: ' + e);
@@ -190,7 +106,6 @@ voter = (username, password) => {
 };
 
 var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
-
     //  Vamos rodar o looping de votação 5 vezes para garantir que essa porcaria vote (problema do servidor dos caras)
     try {
         if (voteLoopCounter < NUMBER_OF_LOOPS_REQUIRED) {
@@ -206,12 +121,13 @@ var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
                 var tokenRegExp = new RegExp(BETA_PAGES_REGEXP[counter-1]);
                 var token = tokenRegExp.exec(tokenHtml);
 
+
                 if (token){
                     var voteFormData = {
                         site: counter,
                         token: token[1]
                     };
-                    
+                    console.log(voteFormData);
                     request.post({url: url, followAllRedirects: true, form: voteFormData, headers: headers}, function(err, httpResponse, html){
                         if (err){
                             console.log(err);
@@ -234,36 +150,12 @@ var voteOnSite = (tokenHtml, counter, username, request, voteLoopCounter) => {
     }   
 }
 
-/**var finishVote = (username, request) => {
-    
-    var confirmationMessage = {
-        //  Soma 12 horas para indicar o próximo vote
-        //message: 'Votação realizada para a conta ' + username + '\nPróxima votação ocorrerá ' + moment().tz('America/Sao_Paulo').add(12, 'hours').add(6, 'minutes').calendar().toLowerCase(),
-        message: 'Relatório diário dos pontos.',
-        chatId: TELEGRAM_CHAT_RAG
-    };
-
-    getVotes(VOTE_LIST_PAGE, request).then((votes) => {
-
-        confirmationMessage.message += '\n\nTotal de pontos: ' + votes;
-        sendTelegramMessage(confirmationMessage, request);
-
-    }, (err) => {
-
-        confirmationMessage.message += '\n\nNão foi possível apurar o total de pontos';
-        sendTelegramMessage(confirmationMessage, request);
-
-    });
-
-}
-**/
-
 function sendReport(username, password) {
 
     let request = require('request');
     request = request.defaults({jar: true});
 
-    login(VOTE_LIST_PAGE, LOGIN_PAGE, username, password, request).then((request) => {       
+    login(FORUM_PAGE, LOGIN_PAGE, username, password, request).then((request) => {       
         let confirmationMessage = {
             message: 'Relatório diário dos pontos para a conta ' + username,
             chatId: TELEGRAM_CHAT_RAG
